@@ -103,6 +103,7 @@ int count_equals(int key_length)
         return 0;
     int i = 0, j = 0;
 
+    #pragma omp parallel for reduction( +: equals_count) private(maxc)
     for( i = 0; i < key_length; i++)
     {
         maxc = 0;
@@ -178,6 +179,7 @@ char* guess_keys(char most_char)
         int* chars_count;
         chars_count = chars_count_at_offset(key_len, i);
 
+        //#pragma omp parallel for reduction(max : maxc)
         for(int j = 0; j < C_CHAR_MAX; j++)
         {
             if(maxc < chars_count[j])
@@ -187,6 +189,7 @@ char* guess_keys(char most_char)
         }
 
         num = 0;
+        //#pragma omp parallel for
         for(int j = 0; j < C_CHAR_MAX; j++)
         {
             if(maxc == chars_count[j])
