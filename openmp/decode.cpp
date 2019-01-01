@@ -209,6 +209,7 @@ int found_keys = 0;
 
 void string_generator_OuO(char key_possible_bytes[][10], int key_no, int *magicshit)
 {
+    #pragma omp parallel for
     for(int i = 0; i < most_poss_key_len; i++)
         poss_key_set[key_no][i] = key_possible_bytes[i][magicshit[i]];
     //cout << found_keys << '\n';
@@ -225,9 +226,10 @@ void key_generator(char key_possible_bytes[][10], int *magicshit, int offset)
         string_generator_OuO(key_possible_bytes, found_keys, magicshit);
         found_keys++;
     }
-    
-    
-    for(int i = 1, j = magicshit[offset]; i <= j; i++)
+    int i=0;
+    int j = magicshit[offset];
+    //#pragma omp parallel for
+    for(i = 1 ; i <= j; i++)
     {
         magicshit[offset]--;
         key_generator(key_possible_bytes, magicshit, offset+1);
