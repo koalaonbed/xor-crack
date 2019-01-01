@@ -72,6 +72,8 @@ int calculate_fitnesses(int from, int to)
 void print_fitnesses(void)
 {
     float sum = 0, tmp, maxs = 0;
+
+    //#pragma omp parallel for reduction( +: sum)
     for(int i = 0; i < MAX_KEY_LEN; i++)
     {
         if(key_len_prob[i] != 0)
@@ -98,22 +100,22 @@ void print_fitnesses(void)
 int count_equals(int key_length)
 {
 
-    int equals_count = 0, maxc;
+    int equals_count = 0;
     if (key_length >= fsize)
         return 0;
     int i = 0, j = 0;
-
-    #pragma omp parallel for reduction( +: equals_count) private(maxc)
+    int maxc[key_length]={0};
+    #pragma omp parallel for reduction( +: equals_count) private(j)
     for( i = 0; i < key_length; i++)
     {
-        maxc = 0;
+        //maxc = 0;
         int *chars_count = chars_count_at_offset(key_length, i);
 
         for( j = 0; j < C_CHAR_MAX; j++)
-            if(maxc < chars_count[j])
-                maxc = chars_count[j];
+            if(maxc[i] < chars_count[j])
+                maxc[i] = chars_count[j];
 
-        equals_count += maxc - 1;
+        equals_count += maxc[i] - 1;
 
 	//delete[] chars_count;
         //cout << key_length << " " << i << ": " << equals_count << '\n';
@@ -131,7 +133,7 @@ int* chars_count_at_offset(int key_length, int offset)   // store result in char
         chars_count[i] = -1;
 
     char c;
-    //#pragma omp parallel for 
+    //#pragma omp parallel for reduction(+:chars_count)
     for(int i = offset; i < fsize; i+= key_length)
     {
         //c = buf[i];
@@ -302,7 +304,7 @@ int main(int argc, char **argv)
     fsize = sizef;
     if(!file.read(buf, sizef))
         return -1;
-
+    #pragma omp parallel for 
     for(int i = 0;  i < MAX_KEY_LEN; i++)
     {
         key_len_prob[i] = 0;
@@ -339,9 +341,11 @@ void produce_plaintexts()
         
         int k = 0;
         int cnt = 0;
+        int poi = 0;
+        //#pragma omp parallel for reduction( +: cnt) private(poi)
         for(int j = 0; j < fsize; j++)
         {
-            int poi = (int)poss_key_set[i][k++]  ^ (int)buf[j];
+            poi = (int)poss_key_set[i][k++]  ^ (int)buf[j];
             if((poi >= ' ' && poi <= '~') || poi == '\n')
                 cnt++;
                 
