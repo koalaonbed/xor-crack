@@ -242,14 +242,18 @@ void key_generator(char key_possible_bytes[][10], int *magicshit, int offset)
 // HELP HELP HELP HELP HELP HELP HELP HELP HELP HELP HELP HELP HELP HELP HELP
 char* all_keys(char key_possible_bytes[][10], char* key_part, int offset)
 {
+    #pragma omp parallel for
     for(int i = 0; i < 10000; i++)
         for(int j = 0; j < MAX_KEY_LEN; j++)
             poss_key_set[i][j] = -1;
     
     int magicshit[most_poss_key_len];
-    for(int i = 0; i < most_poss_key_len; i++)
+
+    int i,j;
+    #pragma omp parallel for private(j)
+    for(i = 0; i < most_poss_key_len; i++)
     {
-        for(int j = 0; j < 10; j++)
+        for(j = 0; j < 10; j++)
         {
             if(key_possible_bytes[i][j] != -1)
             {
