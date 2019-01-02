@@ -4,7 +4,6 @@
 #include <fstream>
 #include <cmath>
 #include <iomanip>
-#include <omp.h>
 #include "decode.hpp"
 
 #define MAX_KEY_LEN 1024
@@ -14,7 +13,7 @@ using namespace std;
 
 char buf[100000];
 float key_len_prob[MAX_KEY_LEN];
-//int chars_count[C_CHAR_MAX];
+int chars_count[C_CHAR_MAX];
 int fsize = 0;
 int most_poss_key_len = 0;
 
@@ -44,13 +43,10 @@ int calculate_fitnesses(int from, int to)
 
     float prev = 0;
     float pprev = 0;
-    float asd = 0;
-    float fitness = 0;
-    
     for(int i = from; i <= to; i++)
     {
-        asd = float(count_equals(i));
-        fitness = asd / (MAX_KEY_LEN + pow(i, 1.5));
+        float asd = float(count_equals(i));
+        float fitness = asd / (MAX_KEY_LEN + pow(i, 1.5));
 
         if( pprev < prev && prev > fitness)
         {
@@ -72,8 +68,6 @@ int calculate_fitnesses(int from, int to)
 void print_fitnesses(void)
 {
     float sum = 0, tmp, maxs = 0;
-
-    //#pragma omp parallel for reduction( +: sum)
     for(int i = 0; i < MAX_KEY_LEN; i++)
     {
         if(key_len_prob[i] != 0)
@@ -100,24 +94,21 @@ void print_fitnesses(void)
 int count_equals(int key_length)
 {
 
-    int equals_count = 0;
+    int equals_count = 0, maxc;
     if (key_length >= fsize)
         return 0;
-    int i = 0, j = 0;
-    int maxc[key_length]={0};
-    #pragma omp parallel for reduction( +: equals_count) private(j)
-    for( i = 0; i < key_length; i++)
+
+    for(int i = 0; i < key_length; i++)
     {
-        //maxc = 0;
-        int *chars_count = chars_count_at_offset(key_length, i);
+        maxc = 0;
+        chars_count_at_offset(key_length, i);
 
-        for( j = 0; j < C_CHAR_MAX; j++)
-            if(maxc[i] < chars_count[j])
-                maxc[i] = chars_count[j];
+        for(int j = 0; j < C_CHAR_MAX; j++)
+            if(maxc < chars_count[j])
+                maxc = chars_count[j];
 
-        equals_count += maxc[i] - 1;
+        equals_count += maxc - 1;
 
-	//delete[] chars_count;
         //cout << key_length << " " << i << ": " << equals_count << '\n';
     }
     //cout << key_length << ": " << equals_count << '\n';
@@ -126,29 +117,25 @@ int count_equals(int key_length)
 
 }
 
-int* chars_count_at_offset(int key_length, int offset)   // store result in chars_count[]
+int chars_count_at_offset(int key_length, int offset)   // store result in chars_count[]
 {
-    int *chars_count=new int [C_CHAR_MAX];
     for(int i = 0;  i < C_CHAR_MAX; i++)
         chars_count[i] = -1;
 
     char c;
-    //#pragma omp parallel for reduction(+:chars_count)
     for(int i = offset; i < fsize; i+= key_length)
     {
-        //c = buf[i];
-        if(chars_count[(int)(buf[i])] == -1)
-            chars_count[(int)(buf[i])] = 1;
+        c = buf[i];
+        if(chars_count[(int)c] == -1)
+            chars_count[(int)c] = 1;
         else
-            chars_count[(int)(buf[i])]++;
+            chars_count[(int)c]++;
     }
-
-    return chars_count;
+    return 0;
 }
 
 int guess_probable_keys_for_chars()
 {
-    //#pragma omp parallel for 
     for(int i = 0; i < 63; i++) // 26 + 26 + 10 + 1
     {
         // since ' ' is the most common char in english
@@ -164,24 +151,23 @@ char* guess_keys(char most_char)
 {
     int key_len = most_poss_key_len, num;
     char key_possible_bytes[most_poss_key_len][10];
-    int j=0, i=0;
-    #pragma omp parallel for private( j )
-    for(i = 0; i < most_poss_key_len; i++)
+	
+	int i=0, j=0;
+	#pragma omp parallel for private( j )
+    for( i = 0; i < most_poss_key_len; i++)
     {
-        for(j = 0; j < 10; j++)
+        for( j = 0; j < 10; j++)
         {
             key_possible_bytes[i][j] = -1;
         }
     }
 
-
     for(int i = 0; i < key_len; i++)
     {
         int maxc = 0;
-        int* chars_count;
-        chars_count = chars_count_at_offset(key_len, i);
 
-        //#pragma omp parallel for reduction(max : maxc)
+        chars_count_at_offset(key_len, i);
+
         for(int j = 0; j < C_CHAR_MAX; j++)
         {
             if(maxc < chars_count[j])
@@ -191,7 +177,6 @@ char* guess_keys(char most_char)
         }
 
         num = 0;
-        //#pragma omp parallel for
         for(int j = 0; j < C_CHAR_MAX; j++)
         {
             if(maxc == chars_count[j])
@@ -214,7 +199,7 @@ int found_keys = 0;
 
 void string_generator_OuO(char key_possible_bytes[][10], int key_no, int *magicshit)
 {
-    #pragma omp parallel for
+	#pragma omp parallel for
     for(int i = 0; i < most_poss_key_len; i++)
         poss_key_set[key_no][i] = key_possible_bytes[i][magicshit[i]];
     //cout << found_keys << '\n';
@@ -231,10 +216,9 @@ void key_generator(char key_possible_bytes[][10], int *magicshit, int offset)
         string_generator_OuO(key_possible_bytes, found_keys, magicshit);
         found_keys++;
     }
-    int i=0;
-    int j = magicshit[offset];
-    //#pragma omp parallel for
-    for(i = 1 ; i <= j; i++)
+    
+    
+    for(int i = 1, j = magicshit[offset]; i <= j; i++)
     {
         magicshit[offset]--;
         key_generator(key_possible_bytes, magicshit, offset+1);
@@ -247,18 +231,17 @@ void key_generator(char key_possible_bytes[][10], int *magicshit, int offset)
 // HELP HELP HELP HELP HELP HELP HELP HELP HELP HELP HELP HELP HELP HELP HELP
 char* all_keys(char key_possible_bytes[][10], char* key_part, int offset)
 {
-    #pragma omp parallel for
+	#pragma omp parallel for
     for(int i = 0; i < 10000; i++)
         for(int j = 0; j < MAX_KEY_LEN; j++)
             poss_key_set[i][j] = -1;
     
     int magicshit[most_poss_key_len];
-
-    int i,j;
-    #pragma omp parallel for private(j)
-    for(i = 0; i < most_poss_key_len; i++)
+	int i, j;
+	#pragma omp parallel for private(j)
+    for(int i = 0; i < most_poss_key_len; i++)
     {
-        for(j = 0; j < 10; j++)
+        for(int j = 0; j < 10; j++)
         {
             if(key_possible_bytes[i][j] != -1)
             {
@@ -304,7 +287,7 @@ int main(int argc, char **argv)
     fsize = sizef;
     if(!file.read(buf, sizef))
         return -1;
-    #pragma omp parallel for 
+	#pragma omp parallel for 
     for(int i = 0;  i < MAX_KEY_LEN; i++)
     {
         key_len_prob[i] = 0;
@@ -341,11 +324,9 @@ void produce_plaintexts()
         
         int k = 0;
         int cnt = 0;
-        int poi = 0;
-        //#pragma omp parallel for reduction( +: cnt) private(poi)
         for(int j = 0; j < fsize; j++)
         {
-            poi = (int)poss_key_set[i][k++]  ^ (int)buf[j];
+            int poi = (int)poss_key_set[i][k++]  ^ (int)buf[j];
             if((poi >= ' ' && poi <= '~') || poi == '\n')
                 cnt++;
                 
