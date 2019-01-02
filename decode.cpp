@@ -114,7 +114,7 @@ int count_equals(int key_length)
 
         equals_count += maxc - 1;
 
-	//delete[] chars_count;
+	delete chars_count;
         //cout << key_length << " " << i << ": " << equals_count << '\n';
     }
     //cout << key_length << ": " << equals_count << '\n';
