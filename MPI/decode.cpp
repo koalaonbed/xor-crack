@@ -52,7 +52,7 @@ int calculate_fitnesses(int from, int to)
     for(int i = from; i <= to; i++)
     {
         asd = float(count_equals(i));
-        MPI_Barrier(MPI_COMM_WORLD);
+        //MPI_Barrier(MPI_COMM_WORLD);
         MPI_Bcast(&asd, 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
         fitness = asd / (MAX_KEY_LEN + pow(i, 1.5));
@@ -116,7 +116,7 @@ void print_fitnesses(void)
             }
         }
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(&most_poss_key_len, 1, MPI_INT, 0, MPI_COMM_WORLD);
 }
 
@@ -276,7 +276,7 @@ void string_generator_OuO(char tmp[][10], int key_no, int *magicshit, int half)
     int shit[most_poss_key_len];
     char key_possible_bytes[most_poss_key_len][10];
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
     if(MPIrank == 0)
     {
         int server = 0;
