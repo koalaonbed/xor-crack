@@ -6,7 +6,7 @@
 #include <iomanip>
 #include "decode.hpp"
 
-#define MAX_KEY_LEN 1024
+#define MAX_KEY_LEN 2048
 #define C_CHAR_MAX 256
 
 using namespace std;
